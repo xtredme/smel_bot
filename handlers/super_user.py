@@ -82,9 +82,23 @@ async def delete_mega_admin_handler(message: types.Message):
     else:
         await message.answer("У вас нет прав на выполнение этой команды.")
 
+async def mega_admin_list_handler(message: types.Message):
+    if str(message.from_user.id) in SUPER_USERS:
+        cur.execute('SELECT * FROM menu')
+        mega_admins = [f'{row[0]}' for row in cur.fetchall()]
+        if len(mega_admins) == 0:
+            await message.answer("В списке мега-админов пусто")
+        else:
+            await bot.send_message(chat_id=message.from_user.id, text="Список мега-админов:\n" + "\n".join(mega_admins))
+    else:
+        await message.answer("У вас нет прав на выполнение этой команды.")
+
+
 dp.filters_factory.bind(AdminOrSuperuserFilter)
 def register_handlers_super_user(dp: Dispatcher):
     dp.register_message_handler(add_mega_admin_handler, commands=['добавить_мега_админ'], is_reply=True)
     dp.register_message_handler(delete_mega_admin_handler, commands=['удалить_мега_админ'], is_reply=True)
+    dp.register_message_handler(mega_admin_list_handler, commands=['список_мега_админ'])
+
 
 
