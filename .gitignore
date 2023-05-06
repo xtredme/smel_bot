@@ -155,10 +155,12 @@ cython_debug/
 smy_xd.db
 base_reminder.db
 bad_words.txt
-data_base/smy.py
+data_base/info_mes.py
 venv
 .env
 *.db
+smel_bot.log
+
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

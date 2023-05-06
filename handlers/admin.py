@@ -83,10 +83,10 @@ async def load_price(message: types.Message, state: FSMContext):
 
 #Регистрируем хэндлеры
 def register_handlers_admin(dp: Dispatcher):
-    dp.register_message_handler(cm_start, commands=['Загрузить'], state= None)
+    dp.register_message_handler(cm_start, commands=['Загрузитьвафафафаф'], state= None)
    # dp.register_message_handler(cansel_handler, Text(equals = 'стоп', ignore_case = True), state="*")
-    dp.register_message_handler(make_change_command, commands=['moderator'], is_chat_admin = True)
-    dp.register_message_handler(load_photo, content_types=['photo'], state=FSMAdmin.photo)
+    dp.register_message_handler(make_change_command, commands=['moderatorсясясяся'], is_chat_admin = True)
+    dp.register_message_handler(load_photo, content_types=['photoсясясяся'], state=FSMAdmin.photo)
     dp.register_message_handler(load_name, state= FSMAdmin.name)
     dp.register_message_handler(load_description, state= FSMAdmin.description)
     dp.register_message_handler(load_price, state=FSMAdmin.price)

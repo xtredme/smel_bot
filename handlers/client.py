@@ -1,29 +1,25 @@
-import aiogram
-
 from keyboards import kb_client
 from aiogram.dispatcher.filters import Text
-from data_base import sql_db, smy
-from create_bot import CHAT_ID, bot, dp
-from aiogram import Bot, Dispatcher, types
-import asyncio
+from data_base import sql_db, info_mes
+from aiogram import Dispatcher, types
+from create_bot import logger
 
-#await message.answer(message.text)  # просто отвечает в чат
-#await message.reply(message.text) # отвечает с упоминанием
-#await bot.send_message(message.from_user.id, message.text) # напишет в личку сообщение, которое отправлено в группе
-
-#@dp.message_handler(commands=['start', 'help'])
 
 async def command_start(message: types.Message):
+    logger.info('Запущена приветственное сообщение командой /start или /help')
+    hi_message = info_mes.hello_message
     try:
-        await message.answer( 'Приветствую, это Бот!', reply_markup=kb_client) # Пишем сообщение в личку пользователю
+        await message.answer( hi_message) #reply_markup=kb_client
         await message.delete()
     except:
-        await message.reply('Общение с ботом через ЛС, напишите ему: \nhttps://t.me/taurus_dev_bot')
-#@dp.message_handler(commands=['Женя'])
+        await message.reply('Общение с ботом через ЛС, напишите ему:')
+
+
 async def command_smy_people(message: types.Message):
+    logger.info('Запущена команда /состав_сму со списком участнмков')
     chat_member = await message.chat.get_member(message.from_user.id)
     if chat_member.status == types.ChatMemberStatus.OWNER: #проверяем администратор ли пользователь
-        sostav_smy = smy.smy_people
+        sostav_smy = info_mes.info_people
         people_info = ""
 
         # Итерируемся по словарю и добавляем информацию о каждом человеке к строке
@@ -39,29 +35,26 @@ async def command_smy_people(message: types.Message):
 
 
 async def photo_last_object(message: types.Message):
-    await message.reply('Вот фото последних объектов: ...')
+    logger.info('Запущена команда /фото_последних_объектов')
+    await message.reply('Вот фото последних объектов: Будет дополнено')
 
 async def smy_menu(message: types.Message):
+    logger.info('Запущена команда /Меню;;;')
     await sql_db.sql_read(message)
 
 
 
-#@dp.message_handler(lambda message: 'бобер' in message.text)
-async def pyton(message: types.Message): #ловим слово (которое указываем в регистрации ниже)и делаем действие
-    await message.reply('Python - это язык програмирования')
 
+async def smy_best(message: types.Message): #ловим слово (которое указываем в регистрации ниже)и делаем действие
+    await message.reply('Вы хотели сказать: "СМУ лучше всех"?)')
 
-
-
-
-# Пишем сообщение в личку пользователю
 
 def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(command_start, commands=['start', 'help'])
-    dp.register_message_handler(command_smy_people, commands=['Состав_СМУ'])
-    dp.register_message_handler(photo_last_object, commands=['Фото_последних_объектов'])
-    dp.register_message_handler(smy_menu, commands=['Меню'])
-    dp.register_message_handler(pyton, Text(equals='питон', ignore_case=True), state="*")
+    dp.register_message_handler(command_smy_people, commands=['состав_сму'])
+    dp.register_message_handler(photo_last_object, commands=['Фото_последних_объектоввфвф'])
+    dp.register_message_handler(smy_menu, commands=['Меню;;;'])
+    dp.register_message_handler(smy_best, Text(equals='СМУ', ignore_case=True), state="*")
 
 
 

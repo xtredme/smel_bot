@@ -1,6 +1,6 @@
 import datetime
 import sqlite3 as sq
-from create_bot import dp, bot, CHAT_ID
+from create_bot import bot, logger
 
 #Создаем базу данных админки
 def sql_start():
@@ -29,8 +29,7 @@ def sql_start_reminder():
     base_reminder = sq.connect('base_reminder.db')
     cur_reminder = base_reminder.cursor()
     if base_reminder:
-        print('База данных напоминаний загружена')
-    base_reminder.execute('CREATE TABLE IF NOT EXISTS menu('
+        base_reminder.execute('CREATE TABLE IF NOT EXISTS menu('
                           'id INTEGER PRIMARY KEY AUTOINCREMENT,'
                           ' name_reminder TEXT,'
                           ' text_reminder TEXT,'
@@ -72,15 +71,27 @@ async def sql_reminder_read(message):
                 active_status = 'Включено'
             else:
                 active_status = 'Выключено'
-            await bot.send_message(chat_id=message.chat.id, text=f'''
+            reminder_time_minute = int(reminder_time)/60
+            logger.info(f'''
+--------
+Осуществлен запрос на все напоминания в базе данных.В базе данных сохранены:
+--------
 Напоминание № {id},
 Статус напоминания: "{active_status}",
 Имя напоминания: "{name_reminder}",
 Текст напоминания: "{text_reminder}",
-Время повторения: "{reminder_time}" секунд,
+Время повторения: "{reminder_time_minute}" мин.,
 Время создания напоминания:"{created_at}",
 Создатель напоминаний: {owner_reminder_id},
 Чат напоминания: {reminder_chat_id}
+-----------------
+''')
+
+            await bot.send_message(chat_id=message.chat.id, text=f'''
+Напоминание № {id},
+Статус напоминания: "{active_status}",
+Имя напоминания: "{name_reminder}",
+Время повторения: "{reminder_time_minute}" мин.,
 ''')
 #С помощью этой функции получаем значения в виде словаря из базы там где ее запросят в reminder
 def reminder_getbase():
@@ -118,10 +129,6 @@ async def reminder_delete_command(reminder_id: int):
 
     # Удаляем напоминание с заданным id из базы данных
     cur_reminder.execute("DELETE FROM menu WHERE id = ?", (reminder_id,))
-    base_reminder.commit()
-
-    # Обновляем id всех записей с id > reminder_id
-    cur_reminder.execute("UPDATE menu SET id = id - 1 WHERE id > ?", (reminder_id,))
     base_reminder.commit()
 
     await bot.send_message(chat_id=reminder_get_chat_id(reminder_id), text=f'Напоминание № {reminder_id} удалено.')
