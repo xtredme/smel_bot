@@ -1,6 +1,6 @@
 from aiogram.utils import executor
 from create_bot import dp
-from handlers import client, admin, other,reminder
+from handlers import client, admin, other,reminder, super_user
 from data_base import sql_db
 from handlers.reminder import check_reminders_status
 from create_bot import logger
@@ -18,7 +18,8 @@ async def on_startup(_):
 client.register_handlers_client(dp)
 admin.register_handlers_admin(dp)
 reminder.register_handlers_reminder(dp)
-other.register_handlers_other(dp) # Должен быть последним т.к есть неименованый handler
+super_user.register_handlers_super_user(dp)
+other.register_handlers_other(dp)  # Должен быть последним т.к есть неименованный handler
 
 
 

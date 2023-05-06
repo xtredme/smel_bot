@@ -160,6 +160,7 @@ venv
 .env
 *.db
 smel_bot.log
+test.py
 
 
 # PyCharm

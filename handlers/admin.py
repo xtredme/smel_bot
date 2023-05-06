@@ -9,6 +9,7 @@ from create_bot import dp, bot
 from aiogram.dispatcher.filters import Text
 from data_base import sql_db
 from keyboards import admin_kb
+from handlers.super_user import AdminOrSuperuserFilter
 
 ID = None
 
@@ -82,6 +83,7 @@ async def load_price(message: types.Message, state: FSMContext):
 
 
 #Регистрируем хэндлеры
+dp.filters_factory.bind(AdminOrSuperuserFilter) # добавляет фильтр использования суперюзера
 def register_handlers_admin(dp: Dispatcher):
     dp.register_message_handler(cm_start, commands=['Загрузитьвафафафаф'], state= None)
    # dp.register_message_handler(cansel_handler, Text(equals = 'стоп', ignore_case = True), state="*")

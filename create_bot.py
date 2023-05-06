@@ -12,6 +12,8 @@ TELEGRAM_MYCHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 CHAT_ID = os.getenv('CHAT_ID')
 CHANEL_ID = os.getenv('CHANEL_ID')
 RETRY_TIME = 600
+SUPER_USERS = os.getenv('SUPER_USERS')
+
 
 # Создаем объект логгера и указываем его имя
 logger = logging.getLogger('smel_bot_logger')
@@ -32,11 +34,6 @@ logger.addHandler(file_handler)
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
-# Примеры логирования
-#logger.debug('Отладочное сообщение') # будет записано в файл
-#logger.info('Информационное сообщение') # будет записано в файл
-#logger.warning('Предупреждение') # будет записано в файл
-#logger.error('Ошибка') # будет записано в файл
-#logger.critical('Критическая ошибка') # будет записано в файл
+
 
 

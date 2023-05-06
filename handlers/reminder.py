@@ -1,6 +1,6 @@
 import asyncio
 
-from aiogram.dispatcher import FSMContext #Импортируем машиносостояние
+from aiogram.dispatcher import FSMContext  # Импортируем машино состояние
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram import types, Dispatcher
@@ -9,46 +9,45 @@ from aiogram.dispatcher.filters import Text
 from data_base import sql_db
 from create_bot import logger
 import datetime
+from handlers.super_user import AdminOrSuperuserFilter
 
-#Напоминальщик
-#создаем глобальную переменную
 
-ID = None
+
+
+# создаем глобальную переменную
+
+
 MINUTE_TO_SECOND: int = 60
 
-#Создаем и описываем нужное машиносостояние
+
 class FSMReminder(StatesGroup):
     name_reminder = State()
     text_reminder = State()
     reminder_time = State()
 
-"""Проверка админ ли человек"""
-#получаем ID текущего модератора
-#@dp.message_handler(commands=['moderator'], is_chat_admin = True)
 
-
-#Начало диалога и машиносостояния reminder
 async def reminder(message: types.Message):
-    logger.info('Запущена функция reminder (Машиносостояние для создания напоминания)')
-    global ID
-    ID = message.from_user.id
-    if message.from_user.id == ID:
+    logger.info('Запущена функция reminder (Машино состояние для создания напоминания)')
+    await FSMReminder.name_reminder.set()
+    await message.reply('Введите название напоминания (Не более 5 слов):')
 
-        await FSMReminder.name_reminder.set()
-        await message.reply('Введите название напоминания:')
-    else:
-        await message.reply('Только администраторы могут создавать напоминания!')
+    await message.reply('Только администраторы и суперпользователи могут создавать напоминания!')
 
-#Ловим первый ответ от пользователя
+
+
+# Ловим первый ответ от пользователя
 async def load_name_reminder(message: types.Message, state: FSMContext):
-    if message.from_user.id == ID:
+    if message.from_user.id == ADMIN_CHAT_ID:
         async with state.proxy() as data:
-            data['name_reminder'] = message.text
+            name_reminder = ' '.join(message.text.split()[:5])
+            data['name_reminder'] = name_reminder[:50]
         await FSMReminder.next()
         await message.reply('Введи текст напоминания')
-#Ловим второй ответ от пользователя
+
+
+# Ловим второй ответ от пользователя
 async def load_text_reminder(message: types.Message, state: FSMContext):
-    if message.from_user.id == ID:
+    if message.from_user.id == ADMIN_CHAT_ID:
         async with state.proxy() as data:
             data['text_reminder'] = message.text
         await FSMReminder.next()
@@ -56,7 +55,7 @@ async def load_text_reminder(message: types.Message, state: FSMContext):
 
 #Ловим третий ответ от пользователя
 async def load_time_second(message: types.Message, state: FSMContext):
-    if message.from_user.id == ID:
+    if message.from_user.id == ADMIN_CHAT_ID:
         async with state.proxy() as data:
             if not message.text.isdigit():
                 await message.reply('Вы ввели неправильное значение. Нужно вводить только целое число.')
@@ -69,8 +68,7 @@ async def load_time_second(message: types.Message, state: FSMContext):
         await sql_db.sql_reminder_add_command(state)
         await state.finish()
 
-        reminder_number = sql_db.get_reminder_id(message.chat.id)
-        logger.info("Напоминание создано.Выход из Машиносостояния")
+        reminder_number = sql_db.get_reminder_id(data['reminder_chat_id'])
         await message.reply(
             f"Напоминанию присвоен №:<b> {reminder_number}.</b>\n"
             f"Для запуска введите команду: <b><i>/старт {reminder_number}</i></b>\n"
@@ -89,27 +87,48 @@ async def cansel_reminder(message: types.Message, state: FSMContext):
     await state.finish()
     await message.reply('Создание напоминания отменено')
 
-@dp.message_handler(commands=['напоминания'])
+#@dp.message_handler(commands=['напоминания'],  is_chat_admin=True)
 async def read_reminder(message: types.Message):
     logger.info('Запрошен список напоминаний в базу данных через функцию read_reminder')
-    await sql_db.sql_reminder_read(message)
+    global ADMIN_CHAT_ID
+    ADMIN_CHAT_ID = message.from_user.id
+    if message.from_user.id == ADMIN_CHAT_ID:
+        reminders = await sql_db.sql_reminder_read(message)
+        if reminders:
+            reminders_text = '\n\n'.join(reminders)
+            await message.reply('Отправлено в ЛС')
+            await bot.send_message(chat_id=message.from_user.id, text=f"Это список ваших напоминаний:\n\n{reminders_text}")
+        else:
+            await bot.send_message(chat_id=message.from_user.id, text="У вас нет сохраненных напоминаний")
+    else:
+        await bot.send_message(chat_id=message.chat.id, text="Данная информация доступна только администратору")
+
+
 
 
 
 
 async def start_reminder(reminder_id: int, chat_id: int):
-    logger.info('Функция start_reminder запускающая цикл запрошеного напоминания запущена')
+    # записываем время запуска в базу данных
+    sql_db.reminder_set_created_at(reminder_id, datetime.datetime.now())
+    # устанавливаем статус "включено" для напоминания
     sql_db.reminder_set_status(reminder_id, True)
-    status = True
-    while status:
-        reminders = sql_db.reminder_getbase()
-        if reminder_id not in reminders:
-            return
-        text = reminders[reminder_id]['text']
-        time = int(reminders[reminder_id]['time'])
+    # устанавливаем флаг "первый запуск"
+    first_run = True
+    while True:
+        # получаем информацию о напоминании из базы данных
+        reminder = sql_db.reminder_get(reminder_id)
+        if reminder is None:
+            # если напоминание удалено из базы данных, выходим из цикла
+            break
+        text = reminder['text']
+        time = int(reminder['time'])
         now = datetime.datetime.now()
-        if now.hour >= 22:
-            await bot.send_message(chat_id=chat_id, text="Уже поздновато, продолжу напоминать завтра")
+        if now.hour >= 22 or (first_run and now.hour < 8):
+            # если сейчас позднее 22:00 или это первый запуск и сейчас раньше 8:00,
+            # то пропускаем напоминание и выводим уведомление
+            if first_run:
+                await bot.send_message(chat_id=chat_id, text=f"Время позднее, с 22:00 до 08:00 будет пропущено {sql_db.reminder_count_skipped() or '0'} напоминаний")
             next_day = now.date() + datetime.timedelta(days=1)
             next_morning = datetime.datetime.combine(next_day, datetime.time(hour=8))
             time_to_wait = (next_morning - now).seconds
@@ -118,13 +137,23 @@ async def start_reminder(reminder_id: int, chat_id: int):
             now = datetime.datetime.now()
             time_to_wait = time - (now - next_morning).seconds
         else:
+            # иначе ждем до времени напоминания
             time_to_wait = time
         await asyncio.sleep(time_to_wait)
+        # отправляем напоминание
         await bot.send_message(chat_id=chat_id, text=f"(id:{reminder_id})Напоминаю Вам:\n {text}")
+        # получаем новый статус из базы данных
         status = sql_db.reminder_get_status(reminder_id)
+        if not status:
+            # если статус изменился на "выключено", выходим из цикла
+            break
+        # устанавливаем флаг "первый запуск" в False
+        first_run = False
+    # устанавливаем статус "выключено" для напоминания
     sql_db.reminder_set_status(reminder_id, False)
 
-@dp.message_handler(commands=['старт'])
+
+#@dp.message_handler(commands=['старт'])
 async def remind_me(message: types.Message):
     logger.info('Пользователь осуществил запуск напоминания командой /старт в функции remind_me')
     reminder_name = message.text.split(' ')[1]
@@ -146,31 +175,6 @@ async def remind_me(message: types.Message):
     asyncio.create_task(start_reminder(reminder_id, message.chat.id))
 
 
-
-
-
-@dp.message_handler(commands=['старт'])
-async def remind_me(message: types.Message):
-    logger.info('Пользователь осуществил запуск напоминания командой /старт в функции remind_me')
-    reminder_name = message.text.split(' ')[1]
-    reminders = sql_db.reminder_getbase()
-
-    try:
-        reminder_id = int(reminder_name)
-        if reminder_id not in reminders:
-            await message.reply(f'Напоминание с id {reminder_id} не найдено')
-            return
-    except ValueError:
-        logger.debug('Вызвано исключение ValueError в функции remind_me')
-        if reminder_name not in reminders:
-            await message.reply(f'Напоминание "{reminder_name}" не найдено')
-            return
-        reminder_id = reminders[reminder_name]['id']
-
-    await message.reply(f'Запускаю напоминание...')
-    asyncio.create_task(start_reminder(reminder_id, message.chat.id)) #TODO
-
-@dp.message_handler(commands=['стоп'])
 async def stop_reminder(message: types.Message):
     logger.info('Пользователь остановил напоминание командой /стоп функцией stop_reminder')
     reminder_id_str = message.text.split(' ')[1]
@@ -203,7 +207,7 @@ async def check_reminders_status():
             asyncio.create_task(start_reminder(reminder_id, reminder_chat_id))
             logger.debug('функция check_reminders_status для проверки статуса успешно отработала')
 
-@dp.message_handler(commands=['удалить'])
+
 async def delete_reminder(message: types.Message):
     logger.info('Пользователем командой /удалить запущена функция delete_reminder для удаления напоминания из БД')
     reminder_id_str = message.text.split(' ')[1]
@@ -224,15 +228,16 @@ async def delete_reminder(message: types.Message):
     await sql_db.reminder_delete_command(reminder_id);
 
 
-
-
-
-
+dp.filters_factory.bind(AdminOrSuperuserFilter) # добавляет фильтр использования суперюзера
 def register_handlers_reminder(dp: Dispatcher):
-    dp.register_message_handler(reminder, commands='напомни', state=None, is_chat_admin=True)
+    dp.register_message_handler(reminder, commands='напомни', state=None, is_admin_or_super=True)
     dp.register_message_handler(load_name_reminder, content_types=['text'], state=FSMReminder.name_reminder)
     dp.register_message_handler(load_text_reminder, content_types=['text'], state=FSMReminder.text_reminder)
     dp.register_message_handler(load_time_second, state=FSMReminder.reminder_time)
+    dp.register_message_handler(read_reminder, commands='напоминания', is_admin_or_super=True)
+    dp.register_message_handler(delete_reminder, commands=['удалить'], is_admin_or_super=True)
+    dp.register_message_handler(stop_reminder, commands=['стоп'], is_admin_or_super=True)
+    dp.register_message_handler(remind_me, commands=['старт'], is_admin_or_super=True)
 
 
 

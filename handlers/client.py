@@ -2,7 +2,8 @@ from keyboards import kb_client
 from aiogram.dispatcher.filters import Text
 from data_base import sql_db, info_mes
 from aiogram import Dispatcher, types
-from create_bot import logger
+from create_bot import logger, dp
+from handlers.super_user import AdminOrSuperuserFilter
 
 
 async def command_start(message: types.Message):
@@ -48,7 +49,7 @@ async def smy_menu(message: types.Message):
 async def smy_best(message: types.Message): #ловим слово (которое указываем в регистрации ниже)и делаем действие
     await message.reply('Вы хотели сказать: "СМУ лучше всех"?)')
 
-
+dp.filters_factory.bind(AdminOrSuperuserFilter) # добавляет фильтр использования суперюзера
 def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(command_start, commands=['start', 'help'])
     dp.register_message_handler(command_smy_people, commands=['состав_сму'])
