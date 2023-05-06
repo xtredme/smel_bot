@@ -1,6 +1,7 @@
 import string, json
-
+from create_bot import dp
 from aiogram import Dispatcher, types
+from handlers.super_user import AdminOrSuperuserFilter
 
 
 async def echo_send(message: types.Message):
@@ -12,5 +13,6 @@ async def echo_send(message: types.Message):
         await message.delete()
 
 
+dp.filters_factory.bind(AdminOrSuperuserFilter) # добавляет фильтр использования суперюзера
 def register_handlers_other(dp: Dispatcher):
     dp.register_message_handler(echo_send)

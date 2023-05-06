@@ -31,50 +31,49 @@ async def reminder(message: types.Message):
     await FSMReminder.name_reminder.set()
     await message.reply('Введите название напоминания (Не более 5 слов):')
 
-    await message.reply('Только администраторы и суперпользователи могут создавать напоминания!')
 
 
 
 # Ловим первый ответ от пользователя
 async def load_name_reminder(message: types.Message, state: FSMContext):
-    if message.from_user.id == ADMIN_CHAT_ID:
-        async with state.proxy() as data:
-            name_reminder = ' '.join(message.text.split()[:5])
-            data['name_reminder'] = name_reminder[:50]
-        await FSMReminder.next()
-        await message.reply('Введи текст напоминания')
+
+    async with state.proxy() as data:
+        name_reminder = ' '.join(message.text.split()[:5])
+        data['name_reminder'] = name_reminder[:50]
+    await FSMReminder.next()
+    await message.reply('Введи текст напоминания')
 
 
 # Ловим второй ответ от пользователя
 async def load_text_reminder(message: types.Message, state: FSMContext):
-    if message.from_user.id == ADMIN_CHAT_ID:
-        async with state.proxy() as data:
-            data['text_reminder'] = message.text
-        await FSMReminder.next()
-        await message.reply('Введи через какое количество минут выводить напоминание')
+
+    async with state.proxy() as data:
+        data['text_reminder'] = message.text
+    await FSMReminder.next()
+    await message.reply('Введи через какое количество минут выводить напоминание')
 
 #Ловим третий ответ от пользователя
 async def load_time_second(message: types.Message, state: FSMContext):
-    if message.from_user.id == ADMIN_CHAT_ID:
-        async with state.proxy() as data:
-            if not message.text.isdigit():
-                await message.reply('Вы ввели неправильное значение. Нужно вводить только целое число.')
-                return
 
-            data['reminder_time'] = MINUTE_TO_SECOND*int(message.text)
-            data['owner_reminder_id'] = message.from_user.id
-            data['reminder_chat_id'] = message.chat.id
+    async with state.proxy() as data:
+        if not message.text.isdigit():
+            await message.reply('Вы ввели неправильное значение. Нужно вводить только целое число.')
+            return
 
-        await sql_db.sql_reminder_add_command(state)
-        await state.finish()
+        data['reminder_time'] = MINUTE_TO_SECOND*int(message.text)
+        data['owner_reminder_id'] = message.from_user.id
+        data['reminder_chat_id'] = message.chat.id
 
-        reminder_number = sql_db.get_reminder_id(data['reminder_chat_id'])
-        await message.reply(
-            f"Напоминанию присвоен №:<b> {reminder_number}.</b>\n"
-            f"Для запуска введите команду: <b><i>/старт {reminder_number}</i></b>\n"
-            f"Для остановки введите: <b><i>/стоп {reminder_number}</i></b>\n",
-            parse_mode="HTML"
-        )
+    await sql_db.sql_reminder_add_command(state)
+    await state.finish()
+
+    reminder_number = sql_db.get_reminder_id(data['reminder_chat_id'])
+    await message.reply(
+        f"Напоминанию присвоен №:<b> {reminder_number}.</b>\n"
+        f"Для запуска введите команду: <b><i>/старт {reminder_number}</i></b>\n"
+        f"Для остановки введите: <b><i>/стоп {reminder_number}</i></b>\n",
+        parse_mode="HTML"
+    )
 
 
 #Выход из состояний
