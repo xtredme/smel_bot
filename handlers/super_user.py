@@ -3,9 +3,10 @@ from aiogram import types, Dispatcher
 from create_bot import dp
 from create_bot import bot, SUPER_USERS
 from aiogram.dispatcher.filters import BoundFilter
-import sqlite3 as sq
+from data_base import sql_db
+MEGA_ADMINS = [] #TODO: надо передать сюда значения из базы данных
 
-MEGA_ADMINS = []
+
 class AdminOrSuperuserFilter(BoundFilter):
     """ Класс позволяет управлять ботом в любых чатах суперпользователю и назначеным им людям"""
     key = 'is_admin_or_super'
@@ -25,80 +26,50 @@ class AdminOrSuperuserFilter(BoundFilter):
             return False
 
 
-def sql_super_user_start():
-    global base, cur, MEGA_ADMINS
-    base = sq.connect('mega_admin.db')
-    cur = base.cursor()
-    if base:
-        print('MEGA_ADMIN Data Base connected "OK"')
-    base.execute('CREATE TABLE IF NOT EXISTS menu(mega_admin_id TEXT PRIMARY KEY)')
-    base.commit()
-
-    # Получаем список мега-админов из базы данных
-    cur.execute('SELECT mega_admin_id FROM menu')
-    MEGA_ADMINS = [str(row[0]) for row in cur.fetchall()]
-    print("MEGA_ADMINS:", MEGA_ADMINS) # for debugging purposes
-
-
-# Получаем данные от Машиносостояний админки ( переменные img,name,description,price)
-async def sql_super_user_command(state):
-    async with state.proxy() as data:
-        values = (data['mega_admin_id'])
-        cur.execute('INSERT INTO menu VALUES (?)', values)
-        base.commit()
-
-
-async def update_mega_admins_list():
-    global MEGA_ADMINS
-    cur.execute('SELECT mega_admin_id FROM menu')
-    MEGA_ADMINS = [str(row[0]) for row in cur.fetchall()]
-    print("MEGA_ADMINS:", MEGA_ADMINS)
-
-async def add_mega_admin_handler(message: types.Message):
+async def add_mega_admin(message: types.Message):
     if str(message.from_user.id) in SUPER_USERS:
         reply_user_id = message.reply_to_message.from_user.id
-        cur.execute('INSERT OR IGNORE INTO menu (mega_admin_id) VALUES (?)', (str(reply_user_id),))
-        if cur.rowcount == 0:
-            await message.answer("Этот пользователь уже есть в списке мега-админов")
-        else:
-            base.commit()
-            await update_mega_admins_list()
-            await message.answer(f"Пользователь добавлен в список мега-админов.\n"
+        reply_user_name = message.reply_to_message.from_user.username # Получение имени пользователя
+        if await sql_db.sql_add_mega_admin(reply_user_id, reply_user_name):
+            MEGA_ADMINS.append(str(reply_user_id))
+            await message.answer(f"Пользователь {reply_user_name} ({reply_user_id}) добавлен в список мега-админов.\n"
                                  f"Теперь пользователю доступно управление ботом в чатах\n"
                                  f"где он не является администратором")
+        else:
+            await message.answer(f"Пользователь {reply_user_name} ({reply_user_id}) уже есть в списке мега-админов")
     else:
         await message.answer("У вас нет прав на выполнение этой команды.")
 
-async def delete_mega_admin_handler(message: types.Message):
+
+
+async def del_mega_admin(message:types.Message):
     if str(message.from_user.id) in SUPER_USERS:
         reply_user_id = message.reply_to_message.from_user.id
-        cur.execute('DELETE FROM menu WHERE mega_admin_id = ?', (str(reply_user_id),))
-        if cur.rowcount == 0:
-            await message.answer("Этого пользователя нет в списке мега-админов")
-        else:
-            base.commit()
-            await update_mega_admins_list()
+        if await sql_db.sql_del_mega_admin(reply_user_id):
+            MEGA_ADMINS.remove(str(reply_user_id))
             await message.answer(f"Пользователь удален из списка мега-админов\n")
+        else:
+            await message.answer("Этого пользователя нет в списке мега-админов")
     else:
         await message.answer("У вас нет прав на выполнение этой команды.")
 
-async def mega_admin_list_handler(message: types.Message):
+
+async def mega_admin_list(message:types.Message):
     if str(message.from_user.id) in SUPER_USERS:
-        cur.execute('SELECT * FROM menu')
-        mega_admins = [f'{row[0]}' for row in cur.fetchall()]
-        if len(mega_admins) == 0:
-            await message.answer("В списке мега-админов пусто")
-        else:
-            await bot.send_message(chat_id=message.from_user.id, text="Список мега-админов:\n" + "\n".join(mega_admins))
+        await message.answer(sql_db.sql_list_mega_admin())
+        print(f'Мега админы в переменной MEGA_ADMINS: {MEGA_ADMINS}')
     else:
         await message.answer("У вас нет прав на выполнение этой команды.")
 
 
 dp.filters_factory.bind(AdminOrSuperuserFilter)
+
+
 def register_handlers_super_user(dp: Dispatcher):
-    dp.register_message_handler(add_mega_admin_handler, commands=['добавить_мега_админ'], is_reply=True)
-    dp.register_message_handler(delete_mega_admin_handler, commands=['удалить_мега_админ'], is_reply=True)
-    dp.register_message_handler(mega_admin_list_handler, commands=['список_мега_админ'])
+    dp.register_message_handler(del_mega_admin, commands=['удалить_мега_админ'], is_reply=True,  is_admin_or_super=True)
+    dp.register_message_handler(mega_admin_list, commands=['список_мега_админ'],  is_admin_or_super=True)
+    dp.register_message_handler(add_mega_admin, commands=['мега_админ'],  is_admin_or_super=True)
+
 
 
 

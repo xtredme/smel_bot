@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DdlMappings">
+    <mapping uuid="f6e0ad61-47ba-47b5-8834-a03eca895576" name="base_reminder Mapping">
+      <data-sources db="643c94b0-50b8-44a0-809e-aedccc2b7367" />
+      <scope>
+        <node kind="database" negative="1" />
+      </scope>
+    </mapping>
+  </component>
+</project>

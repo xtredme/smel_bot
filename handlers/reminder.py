@@ -4,17 +4,13 @@ from aiogram.dispatcher import FSMContext  # Импортируем машино
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram import types, Dispatcher
+
 from create_bot import dp, bot
 from aiogram.dispatcher.filters import Text
 from data_base import sql_db
 from create_bot import logger
 import datetime
 from handlers.super_user import AdminOrSuperuserFilter
-
-
-
-
-# создаем глобальную переменную
 
 
 MINUTE_TO_SECOND: int = 60
@@ -30,8 +26,6 @@ async def reminder(message: types.Message):
     logger.info('Запущена функция reminder (Машино состояние для создания напоминания)')
     await FSMReminder.name_reminder.set()
     await message.reply('Введите название напоминания (Не более 5 слов):')
-
-
 
 
 # Ловим первый ответ от пользователя
@@ -52,6 +46,7 @@ async def load_text_reminder(message: types.Message, state: FSMContext):
     await FSMReminder.next()
     await message.reply('Введи через какое количество минут выводить напоминание')
 
+
 #Ловим третий ответ от пользователя
 async def load_time_second(message: types.Message, state: FSMContext):
 
@@ -60,7 +55,7 @@ async def load_time_second(message: types.Message, state: FSMContext):
             await message.reply('Вы ввели неправильное значение. Нужно вводить только целое число.')
             return
 
-        data['reminder_time'] = MINUTE_TO_SECOND*int(message.text)
+        data['reminder_interval'] = MINUTE_TO_SECOND*int(message.text)
         data['owner_reminder_id'] = message.from_user.id
         data['reminder_chat_id'] = message.chat.id
 
@@ -86,7 +81,7 @@ async def cansel_reminder(message: types.Message, state: FSMContext):
     await state.finish()
     await message.reply('Создание напоминания отменено')
 
-#@dp.message_handler(commands=['напоминания'],  is_chat_admin=True)
+
 async def read_reminder(message: types.Message):
     logger.info('Запрошен список напоминаний в базу данных через функцию read_reminder')
     global ADMIN_CHAT_ID
@@ -104,12 +99,9 @@ async def read_reminder(message: types.Message):
 
 
 
-
-
-
 async def start_reminder(reminder_id: int, chat_id: int):
     # записываем время запуска в базу данных
-    sql_db.reminder_set_created_at(reminder_id, datetime.datetime.now())
+    sql_db.reminder_set_last_view_time(reminder_id, datetime.datetime.now())
     # устанавливаем статус "включено" для напоминания
     sql_db.reminder_set_status(reminder_id, True)
     # устанавливаем флаг "первый запуск"
@@ -123,11 +115,11 @@ async def start_reminder(reminder_id: int, chat_id: int):
         text = reminder['text']
         time = int(reminder['time'])
         now = datetime.datetime.now()
-        if now.hour >= 22 or (first_run and now.hour < 8):
+        if now.hour >= 23 or (first_run and now.hour < 8):
             # если сейчас позднее 22:00 или это первый запуск и сейчас раньше 8:00,
             # то пропускаем напоминание и выводим уведомление
             if first_run:
-                await bot.send_message(chat_id=chat_id, text=f"Время позднее, с 22:00 до 08:00 будет пропущено {sql_db.reminder_count_skipped() or '0'} напоминаний")
+                await bot.send_message(chat_id=chat_id, text=f"Время позднее, останавливаю отправку уведомлений")
             next_day = now.date() + datetime.timedelta(days=1)
             next_morning = datetime.datetime.combine(next_day, datetime.time(hour=8))
             time_to_wait = (next_morning - now).seconds
@@ -215,15 +207,14 @@ async def delete_reminder(message: types.Message):
     try:
         reminder_id = int(reminder_id_str)
         if reminder_id not in reminders:
-            chat_id = sql_db.reminder_get_chat_id(reminder_id)
-            await bot.send_message(chat_id=chat_id, text=f'Напоминание № {reminder_id} удалено.')
+            await message.reply(f'Напоминание "{reminder_id_str}" не найдено')
             return
     except ValueError:
         if reminder_id_str not in reminders:
             await message.reply(f'Напоминание "{reminder_id_str}" не найдено')
             return
         reminder_id = reminders[reminder_id_str]['id']
-    await message.reply(f'Напоминание удалено из базы данных')
+    await message.reply(f'Напоминание {reminder_id_str} удалено из базы данных')
     await sql_db.reminder_delete_command(reminder_id);
 
 
