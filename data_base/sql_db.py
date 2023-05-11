@@ -132,8 +132,8 @@ async def sql_reminder_add_command(state):
 
 
 # читаем базу данных и посылаем сообщение в чат
-async def sql_reminder_read(message):
-    reminders = cur.execute('SELECT * FROM reminders').fetchall()
+async def sql_reminder_read(chat_id):
+    reminders = cur.execute('SELECT * FROM reminders WHERE reminder_chat_id = ?', (chat_id,)).fetchall()
     if len(reminders) == 0:
         return ['-== Напоминаний не создано ==-']
     else:
@@ -164,6 +164,7 @@ async def sql_reminder_read(message):
             reminder_list.append(reminder_info)
 
         return reminder_list
+
 
 
 # С помощью этой функции получаем значения в виде словаря из базы там где ее запросят в reminder

@@ -87,13 +87,18 @@ async def read_reminder(message: types.Message):
     global ADMIN_CHAT_ID
     ADMIN_CHAT_ID = message.from_user.id
     if message.from_user.id == ADMIN_CHAT_ID:
-        reminders = await sql_db.sql_reminder_read(message)
+        # получаем идентификатор чата
+        chat_id = message.chat.id
+        chat_name = message.chat.title if message.chat.type != 'private' else 'Личных сообщений'
+        # читаем напоминания из базы данных для данного чата
+        reminders = await sql_db.sql_reminder_read(chat_id=chat_id)
         if reminders:
+            # формируем список напоминаний для данного чата
             reminders_text = '\n\n'.join(reminders)
             await message.reply('Отправлено в ЛС')
-            await bot.send_message(chat_id=message.from_user.id, text=f"Это список ваших напоминаний:\n\n{reminders_text}")
+            await bot.send_message(chat_id=message.from_user.id, text=f"Это список ваших напоминаний для чата {chat_name}:\n\n{reminders_text}")
         else:
-            await bot.send_message(chat_id=message.from_user.id, text="У вас нет сохраненных напоминаний")
+            await bot.send_message(chat_id=message.from_user.id, text=f"У вас нет сохраненных напоминаний для чата {chat_name}")
     else:
         await bot.send_message(chat_id=message.chat.id, text="Данная информация доступна только администратору")
 
