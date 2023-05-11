@@ -17,7 +17,8 @@ client.register_handlers_client(dp)
 admin.register_handlers_admin(dp)
 reminder.register_handlers_reminder(dp)
 super_user.register_handlers_super_user(dp)
-other.register_handlers_other(dp)  # Должен быть последним т.к есть неименованный handler
+other.register_handlers_other(dp)
+# Должен быть последним т.к есть неименованный handler
 
 
 if __name__ == '__main__':

@@ -144,10 +144,14 @@ async def start_reminder(reminder_id: int, chat_id: int):
     sql_db.reminder_set_status(reminder_id, False)
 
 
-#@dp.message_handler(commands=['старт'])
 async def remind_me(message: types.Message):
     logger.info('Пользователь осуществил запуск напоминания командой /старт в функции remind_me')
     reminder_name = message.text.split(' ')[1]
+    chat_id = message.chat.id  # получаем chat_id из сообщения
+
+    # записываем chat_id в базу данных
+    sql_db.reminder_set_chat_id(chat_id, int(reminder_name))
+
     reminders = sql_db.reminder_getbase()
 
     try:
@@ -162,8 +166,8 @@ async def remind_me(message: types.Message):
             return
         reminder_id = reminders[reminder_name]['id']
 
-    await message.reply(f'Запускаю напоминание...')
-    asyncio.create_task(start_reminder(reminder_id, message.chat.id))
+    await message.reply(f'Ок...')
+    asyncio.create_task(start_reminder(reminder_id, chat_id))
 
 
 async def stop_reminder(message: types.Message):

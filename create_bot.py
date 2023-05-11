@@ -9,8 +9,6 @@ storage = MemoryStorage()
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_MYCHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-CHAT_ID = os.getenv('CHAT_ID')
-CHANEL_ID = os.getenv('CHANEL_ID')
 RETRY_TIME = 600
 SUPER_USERS = os.getenv('SUPER_USERS')
 

@@ -161,7 +161,10 @@ venv
 *.db
 smel_bot.log
 test.py
-
+.idea
+.DS_Store
+handlers.announce.py
+handlers/anonse.py
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

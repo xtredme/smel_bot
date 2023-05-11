@@ -275,4 +275,43 @@ def reminder_set_last_view_time(reminder_id: int, created_at: datetime.datetime)
     cur.execute("UPDATE reminders SET reminder_last_view_time= ? WHERE id = ?", (created_at, reminder_id))
     base.commit()
 
+def reminder_set_chat_id(chat_id: int, id: int):
+    cur.execute('UPDATE reminders SET reminder_chat_id = ? WHERE id = ?', (chat_id, id))
+    base.commit()
+def reminder_get_by_chat_id(chat_id):
+    """Возвращает список напоминаний, созданных в указанном чате."""
+    with sq.connect('SMEL_BASE.db') as con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM reminders WHERE reminder_chat_id=? AND status_reminder=0", (chat_id,))
+        rows = cur.fetchall()
+
+        # преобразовываем список кортежей в список словарей
+        reminders = []
+        for row in rows:
+            reminder = {
+                'id': row[0],
+                'name': row[1],
+                'text': row[2],
+                'interval': row[3],
+                'status': row[4],
+                'created_at': row[5],
+                'owner_id': row[6],
+                'chat_id': row[7],
+                'last_view_time': row[8],
+                'day': row[9],
+                'day_number': row[10],
+                'month': row[11]
+            }
+            reminders.append(reminder)
+
+        return reminders
+
+
+def reminder_list_by_chat_id(chat_id):
+    """Возвращает список напоминаний для указанного чата."""
+    reminders = reminder_get_by_chat_id(chat_id)
+    if not reminders:
+        return f'Д'
+
+
 
