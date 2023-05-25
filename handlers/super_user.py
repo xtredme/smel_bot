@@ -15,10 +15,7 @@ class AdminOrSuperuserFilter(BoundFilter):
         self.is_admin_or_super = is_admin_or_super
 
     async def check(self, message: types.Message):
-        member = await bot.get_chat_member(message.chat.id, message.from_user.id)
-        if member.is_chat_admin():
-            return True
-        elif str(message.from_user.id) in SUPER_USERS:
+        if str(message.from_user.id) in SUPER_USERS:
             return True
         elif str(message.from_user.id) in MEGA_ADMINS:
             return True

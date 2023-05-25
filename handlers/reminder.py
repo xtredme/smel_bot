@@ -13,6 +13,10 @@ import datetime
 from handlers.super_user import AdminOrSuperuserFilter
 
 
+
+
+
+
 MINUTE_TO_SECOND: int = 60
 
 
@@ -105,8 +109,7 @@ async def read_reminder(message: types.Message):
 
 
 async def start_reminder(reminder_id: int, chat_id: int):
-    # записываем время запуска в базу данных
-    sql_db.reminder_set_last_view_time(reminder_id, datetime.datetime.now())
+
     # устанавливаем статус "включено" для напоминания
     sql_db.reminder_set_status(reminder_id, True)
     # устанавливаем флаг "первый запуск"
@@ -129,7 +132,6 @@ async def start_reminder(reminder_id: int, chat_id: int):
             next_morning = datetime.datetime.combine(next_day, datetime.time(hour=8))
             time_to_wait = (next_morning - now).seconds
             await asyncio.sleep(time_to_wait)
-            await bot.send_message(chat_id=chat_id, text="Доброе утро, уважаемые коллеги СМУ!")
             now = datetime.datetime.now()
             time_to_wait = time - (now - next_morning).seconds
         else:
@@ -137,7 +139,8 @@ async def start_reminder(reminder_id: int, chat_id: int):
             time_to_wait = time
         await asyncio.sleep(time_to_wait)
         # отправляем напоминание
-        await bot.send_message(chat_id=chat_id, text=f"(id:{reminder_id})Напоминаю Вам:\n {text}")
+        if await bot.send_message(chat_id=chat_id, text=f"(id:{reminder_id})Напоминаю Вам:\n {text}"):
+            sql_db.reminder_set_last_view_time(reminder_id, datetime.datetime.now())
         # получаем новый статус из базы данных
         status = sql_db.reminder_get_status(reminder_id)
         if not status:
@@ -147,7 +150,6 @@ async def start_reminder(reminder_id: int, chat_id: int):
         first_run = False
     # устанавливаем статус "выключено" для напоминания
     sql_db.reminder_set_status(reminder_id, False)
-
 
 async def remind_me(message: types.Message):
     logger.info('Пользователь осуществил запуск напоминания командой /старт в функции remind_me')
@@ -227,6 +229,11 @@ async def delete_reminder(message: types.Message):
     await sql_db.reminder_delete_command(reminder_id);
 
 
+
+
+
+
+
 dp.filters_factory.bind(AdminOrSuperuserFilter) # добавляет фильтр использования суперюзера
 def register_handlers_reminder(dp: Dispatcher):
     dp.register_message_handler(reminder, commands='напомни', state=None, is_admin_or_super=True)
@@ -237,6 +244,8 @@ def register_handlers_reminder(dp: Dispatcher):
     dp.register_message_handler(delete_reminder, commands=['удалить'], is_admin_or_super=True)
     dp.register_message_handler(stop_reminder, commands=['стоп'], is_admin_or_super=True)
     dp.register_message_handler(remind_me, commands=['старт'], is_admin_or_super=True)
+
+
 
 
 

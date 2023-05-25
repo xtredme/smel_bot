@@ -34,11 +34,21 @@ def sql_start():
                  'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,'
                  'owner_reminder_id TEXT,'
                  'reminder_chat_id TEXT,'
-                 'reminder_last_view_time TIMESTAMP  DEFAULT None,'  # Последнее время отправки уведомления
+                 'reminder_last_view_time TIMESTAMP  DEFAULT None,'
+                 'next_reminder_time TIMESTAMP DEFAULT None,'  # Последнее время отправки уведомления
                  'reminder_in_day DEFAULT None,'  # День уведомления (Пн,Вт,Ср,Чт,Пт,Cб,Вс)
                  'reminder_day_number DEFAULT None,'  # Число месяца
                  'reminder_month DEFAULT None'  # месяц
                  ')')
+
+    base.execute('CREATE TABLE IF NOT EXISTS banlist('
+                 'id INTEGER PRIMARY KEY AUTOINCREMENT,'
+                 'banned_id INTEGER,'
+                 'ban_status BOOLEAN DEFAULT False,'
+                 'need_sorry BOOLEAN DEFAULT False,'
+                 'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+                 ')')
+
     cur.execute('SELECT tg_id FROM people WHERE mega_admin_status = True')
     handlers.super_user.MEGA_ADMINS = [str(row[0]) for row in cur.fetchall()]
     print(f'MEGA_ADMINS in DataBases: {handlers.super_user.MEGA_ADMINS}')
@@ -148,6 +158,7 @@ async def sql_reminder_read(chat_id):
              owner_reminder_id,
              reminder_chat_id,
              reminder_last_view_time,
+             next_reminder_time,
              reminder_in_day,
              reminder_day_number,
              reminder_month) = reminder
@@ -184,6 +195,7 @@ def reminder_getbase():
              owner_reminder_id,
              reminder_chat_id,
              reminder_last_view_time,
+             next_reminder_time,
              reminder_in_day,
              reminder_day_number,
              reminder_month) = reminder
@@ -196,6 +208,7 @@ def reminder_getbase():
                           'owner_reminder_id': owner_reminder_id,
                           'reminder_chat_id': reminder_chat_id,
                           'reminder_last_view_time': reminder_last_view_time,
+                          'next_reminder_time': next_reminder_time,
                           'reminder_in_day': reminder_in_day,
                           'reminder_day_number': reminder_day_number,
                           'reminder_month': reminder_month}
@@ -239,9 +252,6 @@ def get_reminder_id(chat_id: str) -> int:
     return result[0] if result else None
 
 
-
-
-
 def reminder_get(reminder_id):
     reminder = cur.execute('SELECT * FROM reminders WHERE id=?', (reminder_id,)).fetchone()
     if reminder is None:
@@ -256,6 +266,7 @@ def reminder_get(reminder_id):
          owner_reminder_id,
          reminder_chat_id,
          reminder_last_view_time,
+         next_reminder_time,
          reminder_in_day,
          reminder_day_number,
          reminder_month) = reminder
@@ -268,6 +279,7 @@ def reminder_get(reminder_id):
                 'owner_reminder_id': owner_reminder_id,
                 'reminder_chat_id': reminder_chat_id,
                 'reminder_last_view_time': reminder_last_view_time,
+                'next_reminder_time':next_reminder_time,
                 'reminder_in_day': reminder_in_day,
                 'reminder_day_number': reminder_day_number,
                 'reminder_month': reminder_month}
@@ -299,9 +311,10 @@ def reminder_get_by_chat_id(chat_id):
                 'owner_id': row[6],
                 'chat_id': row[7],
                 'last_view_time': row[8],
-                'day': row[9],
-                'day_number': row[10],
-                'month': row[11]
+                'next_reminder_time': row[9],
+                'day': row[10],
+                'day_number': row[11],
+                'month': row[12]
             }
             reminders.append(reminder)
 
@@ -313,6 +326,26 @@ def reminder_list_by_chat_id(chat_id):
     reminders = reminder_get_by_chat_id(chat_id)
     if not reminders:
         return f'Д'
+
+def reminder_set_next_reminder_time(reminder_id: int, next_reminder_time: datetime.datetime):
+    cur.execute("UPDATE reminders SET next_reminder_time = ? WHERE id = ?", (next_reminder_time.isoformat(), reminder_id))
+    base.commit()
+
+def add_to_banlist(banned_id: int, ban_status: bool, need_sorry: bool, created_at: datetime.datetime):
+    cur.execute("SELECT * FROM banlist WHERE banned_id=?", (banned_id,))
+    existing_row = cur.fetchone()
+    if not existing_row:
+        cur.execute("INSERT INTO banlist (banned_id, ban_status, need_sorry, created_at) "
+                    "VALUES (?, ?, ?, ?)", (banned_id, ban_status, need_sorry, created_at))
+        base.commit()
+
+
+async def remove_from_banlist(banned_id: int):
+    cur.execute("UPDATE banlist SET ban_status = ?, need_sorry = ? WHERE banned_id = ?", (False, False, banned_id))
+    base.commit()
+
+
+
 
 
 
